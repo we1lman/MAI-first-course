@@ -3,10 +3,11 @@
 
 #include "TreeNode.hpp"
 #include <iostream>
-#include <climits>
 
 using std::cout;
 using std::endl;
+
+const int INT_MAX = 2147483647;
 
 class BinarySearchTree {
 private:
