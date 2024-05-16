@@ -4,20 +4,39 @@ from tkinter import simpledialog, messagebox
 import matplotlib.pyplot as plt
 import networkx as nx
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from itertools import permutations
 
 
-def enumerate_paths(graph, start, end, path=[]):
-    path = path + [start]
-    if start == end:
-        return [path]
-    if start not in graph:
-        return []
+def build_latin_square(nodes):
+    n = len(nodes)
+    latin_square = [[0] * n for _ in range(n)]
+    perms = list(permutations(nodes))
+
+    for i in range(n):
+        for j in range(n):
+            latin_square[i][j] = perms[i][j]
+
+    return latin_square
+
+
+def enumerate_paths_latin(graph, start, end):
+    nodes = list(graph.nodes)
+    node_index = {node: i for i, node in enumerate(nodes)}
+    latin_square = build_latin_square(nodes)
     paths = []
-    for node in graph[start]:
-        if node not in path:
-            newpaths = enumerate_paths(graph, node, end, path)
-            for newpath in newpaths:
-                paths.append(newpath)
+
+    def dfs(current_path):
+        current_node = current_path[-1]
+        if current_node == end:
+            paths.append(current_path)
+            return
+        current_index = node_index[current_node]
+        for i in range(len(nodes)):
+            next_node = latin_square[current_index][i]
+            if next_node not in current_path and next_node in graph[current_node]:
+                dfs(current_path + [next_node])
+
+    dfs([start])
     return paths
 
 
@@ -114,9 +133,12 @@ class App:
     def add_edge(self):
         edge = simpledialog.askstring('Добавление ребра', 'Введите номера вершин через пробел')
         if edge:
-            node1, node2 = map(int, edge.split())
-            self.graph.add_edge(node1, node2)
-            self.draw_graph()
+            try:
+                node1, node2 = map(int, edge.split())
+                self.graph.add_edge(node1, node2)
+                self.draw_graph()
+            except ValueError:
+                messagebox.showerror('Ошибка', 'Введите два числа, разделенные пробелом')
 
     def remove_node(self):
         node = simpledialog.askstring('Удаление вершины', 'Введите номер вершины')
@@ -127,9 +149,12 @@ class App:
     def remove_edge(self):
         edge = simpledialog.askstring('Удаление ребра', 'Введите номера вершин через пробел')
         if edge:
-            node1, node2 = map(int, edge.split())
-            self.graph.remove_edge(node1, node2)
-            self.draw_graph()
+            try:
+                node1, node2 = map(int, edge.split())
+                self.graph.remove_edge(node1, node2)
+                self.draw_graph()
+            except ValueError:
+                messagebox.showerror('Ошибка', 'Введите два числа, разделенные пробелом')
 
     def clear_graph(self):
         self.graph.clear_graph()
@@ -139,10 +164,14 @@ class App:
         start_node = simpledialog.askstring('Начальная вершина', 'Введите номер начальной вершины')
         end_node = simpledialog.askstring('Конечная вершина', 'Введите номер конечной вершины')
         if start_node and end_node:
-            start_node = int(start_node)
-            end_node = int(end_node)
-            all_paths = enumerate_paths(dict(self.graph.G.adjacency()), start_node, end_node)
-            messagebox.showinfo('Перечисление путей', f'Все пути из вершины {start_node} в вершину {end_node}: {all_paths}')
+            try:
+                start_node = int(start_node)
+                end_node = int(end_node)
+                all_paths = enumerate_paths_latin(self.graph.G, start_node, end_node)
+                messagebox.showinfo('Перечисление путей',
+                                    f'Все пути из вершины {start_node} в вершину {end_node}: {all_paths}')
+            except ValueError:
+                messagebox.showerror('Ошибка', 'Введите корректные номера вершин')
 
 
 if __name__ == "__main__":
