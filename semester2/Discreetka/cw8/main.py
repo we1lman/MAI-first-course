@@ -1,186 +1,150 @@
+import itertools
 import tkinter as tk
 from tkinter import simpledialog, messagebox
-import networkx as nx
 import matplotlib.pyplot as plt
+import networkx as nx
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import math
 
 
-def calc_petersen_graph_pos():
-    r = 2
-    R = 2 * r
-    pos = {}
-    delta = 2 * math.pi / 5
-    curRadius = math.pi / 2
-    for i in range(5):
-        pos[i] = (R * math.cos(curRadius), R * math.sin(curRadius))
-        pos[i + 5] = (r * math.cos(curRadius), r * math.sin(curRadius))
-        curRadius += delta
-    return pos
+def enumerate_paths(graph, start, end, path=[]):
+    path = path + [start]
+    if start == end:
+        return [path]
+    if start not in graph:
+        return []
+    paths = []
+    for node in graph[start]:
+        if node not in path:
+            newpaths = enumerate_paths(graph, node, end, path)
+            for newpath in newpaths:
+                paths.append(newpath)
+    return paths
 
 
-class GraphApp:
-    """Приложение для работы с графами и проверки на планарность.
+class Graph:
+    def __init__(self, G=None, from_edges=None):
+        if G is not None:
+            self.G = G
+        elif from_edges is not None:
+            self.G = nx.DiGraph()
+            self.G.add_edges_from(from_edges)
+        else:
+            self.G = nx.DiGraph()
+        self.pos = None
 
-    Атрибуты:
-        root (tk.Tk): Главное окно приложения.
-        G (networkx.Graph): Объект графа для работы.
-    """
+    def add_node(self, node):
+        self.G.add_node(node)
+        self.pos = nx.spring_layout(self.G)
 
+    def add_edge(self, node1, node2):
+        self.G.add_edge(node1, node2)
+        self.pos = nx.spring_layout(self.G)
+
+    def remove_node(self, node):
+        self.G.remove_node(node)
+        self.pos = nx.spring_layout(self.G)
+
+    def remove_edge(self, node1, node2):
+        self.G.remove_edge(node1, node2)
+        self.pos = nx.spring_layout(self.G)
+
+    def clear_graph(self):
+        if nx.is_frozen(self.G):
+            self.G = nx.DiGraph()
+        else:
+            self.G.clear()
+
+    def planar_layout(self):
+        return nx.planar_layout(self.G)
+
+
+class App:
     def __init__(self):
-        """Инициализация приложения."""
-        self.G = nx.DiGraph()
+        self.graph = Graph()
         self.root = tk.Tk()
-        self.root.title('Графы и планарность')
-
-        # Создание интерфейса
+        self.root.title('Ориентированный граф и латинская композиция')
         self._create_interface()
+        self._setup_graph_canvas()
 
     def _create_interface(self):
-        """Создание пользовательского интерфейса приложения."""
         self.graph_frame = tk.Frame(self.root)
         self.graph_frame.pack(fill=tk.BOTH, expand=True)
+        self._create_buttons()
 
-        # Первый ряд кнопок для взаимодействия с графом
+    def _create_buttons(self):
         interaction_frame = tk.Frame(self.root, height=60)
         interaction_frame.pack(side=tk.BOTTOM, fill=tk.X)
         interaction_frame.pack_propagate(False)
 
-        # Второй ряд кнопок для примеров графов
         examples_frame = tk.Frame(self.root, height=60)
         examples_frame.pack(side=tk.BOTTOM, fill=tk.X)
         examples_frame.pack_propagate(False)
 
-        # Создание кнопок взаимодействия с графом
         interaction_buttons = [
             ('Добавить вершину', self.add_node),
             ('Добавить ребро', self.add_edge),
             ('Удалить вершину', self.remove_node),
             ('Удалить ребро', self.remove_edge),
-            ('Проверить планарность', self.check_planarity),
+            ('Перечислить пути', self.enumerate_paths),
             ('Очистить граф', self.clear_graph)
-        ]
-
-        # Создание кнопок для примеров графов
-        example_buttons = [
-            ('Граф Петерсена', self.create_petersen),  # Будет непланарным
-            ('Граф К5', self.create_k5),  # Будет непланарным
-            ('Граф П4', self.create_p4)  # Будет планарным
         ]
 
         for text, command in interaction_buttons:
             tk.Button(interaction_frame, text=text, command=command).pack(side=tk.LEFT, padx=5, pady=5)
 
-        for text, command in example_buttons:
-            tk.Button(examples_frame, text=text, command=command).pack(side=tk.LEFT, padx=5, pady=5)
-
-        # Настройка места для графики
-        self._setup_graph_canvas()
-
-    def add_node(self):
-        """Запрашивает имя узла и добавляет его в граф."""
-        node = simpledialog.askstring('Add Node', 'Enter Node')
-        if node:
-            self.G.add_node(int(node))
-            self.draw_graph()
-
-    def add_edge(self):
-        """Запрашивает пару узлов и добавляет ребро между ними в граф."""
-        edge = simpledialog.askstring('Add Edge', 'Enter Edge (node1 node2)')
-        if edge:
-            node1, node2 = map(int, edge.split())
-            self.G.add_edge(node1, node2)
-            self.draw_graph()
-
-    def remove_node(self):
-        """Запрашивает имя узла и удаляет его из графа."""
-        node = simpledialog.askstring('Remove Node', 'Enter Node')
-        if node:
-            self.G.remove_node(int(node))
-            self.draw_graph()
-
-    def remove_edge(self):
-        """Запрашивает пару узлов и удаляет ребро между ними из графа."""
-        edge = simpledialog.askstring('Remove Edge', 'Enter Edge (node1, node2)')
-        if edge:
-            node1, node2 = edge.split(',')
-            self.G.remove_edge(node1, node2)
-            self.draw_graph()
-
-    def create_petersen(self):
-        """Создает граф Петерсена и отображает его."""
-        self.G.clear()
-        self.G = nx.petersen_graph()
-        pos = calc_petersen_graph_pos()
-        self.draw_graph(pos)
-
-    def clear_graph(self):
-        """Очищает текущий граф."""
-        self.G.clear()
-        self.draw_graph()
-
-    def draw_graph(self, pos=None):
-        """Отрисовывает текущий граф.
-
-        Args:
-            pos (dict, optional): Позиции узлов. Если None, будет использован spring_layout.
-        """
-        print(self.G.nodes)
-        self.fig.clf()  # Очистка фигуры перед созданием нового графа
-        if pos is None:
-            pos = nx.spring_layout(self.G)
-        nx.draw(self.G, pos, with_labels=True, node_size=700, node_color='skyblue', font_size=20, font_weight='bold')
-        self.canvas.draw_idle()
-
-    def check_planarity(self):
-        """Проверяет граф на планарность."""
-        check = nx.check_planarity(self.G, counterexample=True)
-        if check[0]:
-            messagebox.showinfo('Планарность', 'Граф планарный')
-        else:
-            messagebox.showinfo('Планарность', 'Граф не планарный')
-            # Отображение контрпримера
-            self.show_counterexample(check[1])
-
-    def show_counterexample(self, counterexample):
-        """Отображает контрпример непланарного графа в новом окне."""
-        new_window = tk.Toplevel(self.root)
-        new_window.title('Контрпример')
-        new_window.geometry('800x600')
-
-        # Создание новой фигуры для контрпримера
-        new_fig = plt.Figure(figsize=(8, 6))
-        new_canvas = FigureCanvasTkAgg(new_fig, master=new_window)
-        new_canvas_widget = new_canvas.get_tk_widget()
-        new_canvas_widget.pack(fill=tk.BOTH, expand=True)
-
-        ax = new_fig.add_subplot(111)
-        pos = nx.spring_layout(counterexample)
-        nx.draw(counterexample, pos, with_labels=True, node_size=700, node_color='red', font_size=20,
-                font_weight='bold', ax=ax)
-        new_canvas.draw_idle()
-
-    def create_k5(self):
-        """Создает полный граф K5 и отображает его."""
-        self.G.clear()
-        self.G = nx.complete_graph(5)
-        self.draw_graph()
-
-    def create_p4(self):
-        """Создает путь граф P4 и отображает его."""
-        self.G.clear()
-        self.G = nx.path_graph(4)
-        self.draw_graph()
-
     def _setup_graph_canvas(self):
-        """Настройка области для отображения графа."""
         self.fig = plt.figure(figsize=(8, 6))
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.graph_frame)
         self.canvas_widget = self.canvas.get_tk_widget()
         self.canvas_widget.pack(fill=tk.BOTH, expand=True)
 
+    def draw_graph(self):
+        self.fig.clf()
+        pos = self.graph.pos if self.graph.pos else nx.spring_layout(self.graph.G)
+        nx.draw(self.graph.G, pos, with_labels=True, node_size=700, node_color='skyblue', font_size=20,
+                font_weight='bold')
+        self.canvas.draw_idle()
+
+    def add_node(self):
+        node = simpledialog.askstring('Добавление вершины', 'Введите номер вершины')
+        if node:
+            self.graph.add_node(int(node))
+            self.draw_graph()
+
+    def add_edge(self):
+        edge = simpledialog.askstring('Добавление ребра', 'Введите номера вершин через пробел')
+        if edge:
+            node1, node2 = map(int, edge.split())
+            self.graph.add_edge(node1, node2)
+            self.draw_graph()
+
+    def remove_node(self):
+        node = simpledialog.askstring('Удаление вершины', 'Введите номер вершины')
+        if node:
+            self.graph.remove_node(int(node))
+            self.draw_graph()
+
+    def remove_edge(self):
+        edge = simpledialog.askstring('Удаление ребра', 'Введите номера вершин через пробел')
+        if edge:
+            node1, node2 = map(int, edge.split())
+            self.graph.remove_edge(node1, node2)
+            self.draw_graph()
+
+    def clear_graph(self):
+        self.graph.clear_graph()
+        self.draw_graph()
+
+    def enumerate_paths(self):
+        start_node = simpledialog.askstring('Начальная вершина', 'Введите номер начальной вершины')
+        end_node = simpledialog.askstring('Конечная вершина', 'Введите номер конечной вершины')
+        if start_node and end_node:
+            start_node = int(start_node)
+            end_node = int(end_node)
+            all_paths = enumerate_paths(dict(self.graph.G.adjacency()), start_node, end_node)
+            messagebox.showinfo('Перечисление путей', f'Все пути из вершины {start_node} в вершину {end_node}: {all_paths}')
+
 
 if __name__ == "__main__":
-    app = GraphApp()
+    app = App()
     app.root.mainloop()
-
