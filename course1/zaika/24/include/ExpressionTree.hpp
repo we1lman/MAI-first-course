@@ -2,33 +2,96 @@
 #define EXPRESSIONTREE_HPP
 
 #include "ExpressionNode.hpp"
-#include <stack>
 #include <iostream>
+#include <cstring>
 
 class ExpressionTree {
 private:
     ExpressionNode* root;
 
+    bool isNumber(const char* str) {
+        for (size_t i = 0; str[i] != '\0'; ++i) {
+            if (!isdigit(str[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     void simplify(ExpressionNode* node) {
         if (!node) return;
+
         simplify(node->left);
         simplify(node->right);
 
-        if (node->value == "/" && node->right && node->right->value == "2") {
-            if (node->left && node->left->value == "*" &&
-                ((node->left->left && node->left->left->value == "4") || (node->left->right && node->left->right->value == "4"))) {
-                node->value = "*";
-                node->right->value = "2";
+        if (node->left && node->right && strcmp(node->value, "/") == 0) {
+            bool leftIsNumber = isNumber(node->left->value);
+            bool rightIsNumber = isNumber(node->right->value);
 
-                if (node->left->left && node->left->left->value == "4") {
-                    node->left->left->value = "2";
-                } else {
-                    node->left->right->value = "2";
+            if (strcmp(node->left->value, "*") == 0 && rightIsNumber) {
+                int divisor = atoi(node->right->value);
+
+                if (isNumber(node->left->left->value)) {
+                    int multiplicand = atoi(node->left->left->value);
+
+                    if (divisor != 0 && multiplicand % divisor == 0) {
+                        int newValue = multiplicand / divisor;
+                        delete[] node->value;
+                        node->value = new char[2];
+                        strcpy(node->value, "*");
+
+                        delete[] node->left->left->value;
+                        node->left->left->value = new char[20];
+                        snprintf(node->left->left->value, 20, "%d", newValue);
+
+                        delete node->right;
+                        node->right = nullptr;
+                    }
                 }
 
-                ExpressionNode* temp = node->left->right;
-                node->left = temp;
+                if (isNumber(node->left->right->value)) {
+                    int multiplicand = atoi(node->left->right->value);
+
+                    if (divisor != 0 && multiplicand % divisor == 0) {
+                        int newValue = multiplicand / divisor;
+
+                        delete[] node->value;
+                        node->value = new char[2];
+                        strcpy(node->value, "*");
+
+                        delete[] node->left->right->value;
+                        node->left->right->value = new char[20];
+                        snprintf(node->left->right->value, 20, "%d", newValue);
+
+                        delete node->right;
+                        node->right = nullptr;
+                    }
+                }
             }
+        }
+    }
+
+    void printInfix(ExpressionNode* node, bool isRoot = true) {
+        if (!node) return;
+
+        if (node->left) {
+            bool needParens = (strcmp(node->value, "+") == 0 || strcmp(node->value, "-") == 0);
+            if (needParens) std::cout << "(";
+            printInfix(node->left, false);
+            if (needParens) std::cout << ")";
+        }
+
+        std::cout << node->value;
+
+        if (node->right) {
+            bool needParens = (strcmp(node->value, "+") == 0 || strcmp(node->value, "-") == 0);
+            if (needParens) std::cout << "(";
+            printInfix(node->right, false);
+            if (needParens) std::cout << ")";
+        }
+
+        if (isRoot && node->value && strcmp(node->value, "*") == 0) {
+            std::cout << "\b \b";
         }
     }
 
@@ -38,46 +101,36 @@ public:
         delete root;
     }
 
-    friend int precedence(char op);
-    friend string infixToPostfix(const string& infix);
+    void build(const char* postfix) {
+        ExpressionNode* stack[100];
+        int stackIndex = -1;
+        const char* operators = "+-*/";
 
-    void build(const std::string& postfix) {
-        stack<ExpressionNode*> stack;
-        string operators = "+-*/";
-
-        for (char ch : postfix) {
-            string value(1, ch);
-            if (operators.find(ch) != string::npos) {
-                ExpressionNode* right = stack.top(); stack.pop();
-                ExpressionNode* left = stack.top(); stack.pop();
+        for (size_t i = 0; i < strlen(postfix); ++i) {
+            char ch = postfix[i];
+            char value[2] = {ch, '\0'};
+            if (strchr(operators, ch)) {
+                ExpressionNode* right = stack[stackIndex--];
+                ExpressionNode* left = stack[stackIndex--];
                 ExpressionNode* node = new ExpressionNode(value);
                 node->left = left;
                 node->right = right;
-                stack.push(node);
+                stack[++stackIndex] = node;
             } else {
-                stack.push(new ExpressionNode(value));
+                stack[++stackIndex] = new ExpressionNode(value);
             }
         }
 
-        root = stack.top();
+        root = stack[stackIndex];
     }
 
     void simplifyTree() {
         simplify(root);
     }
 
-    void printInfix(ExpressionNode* node) {
-        if (!node) return;
-        if (node->left) cout << "(";
-        printInfix(node->left);
-        cout << node->value;
-        printInfix(node->right);
-        if (node->right) cout << ")";
-    }
-
     void display() {
         printInfix(root);
-        cout << endl;
+        std::cout << std::endl;
     }
 };
 
@@ -91,36 +144,37 @@ int precedence(char op) {
     return 0;
 }
 
-string infixToPostfix(const string& infix) {
-    stack<char> operators;
-    string postfix = "";
+char* infixToPostfix(const char* infix) {
+    char operators[100];
+    int operatorsIndex = -1;
+    char* postfix = new char[strlen(infix) + 1];
+    int k = 0;
 
-    for (char c : infix) {
-        if (isdigit(c) || isalpha(c)) {
-            postfix += c;
+    for (size_t i = 0; i < strlen(infix); ++i) {
+        char c = infix[i];
+        if (isalnum(c)) {
+            postfix[k++] = c;
         } else if (c == '(') {
-            operators.push(c);
+            operators[++operatorsIndex] = c;
         } else if (c == ')') {
-            while (!operators.empty() && operators.top() != '(') {
-                postfix += operators.top();
-                operators.pop();
+            while (operatorsIndex >= 0 && operators[operatorsIndex] != '(') {
+                postfix[k++] = operators[operatorsIndex--];
             }
-            operators.pop();
+            operatorsIndex--;
         } else {
-            while (!operators.empty() && precedence(operators.top()) >= precedence(c)) {
-                postfix += operators.top();
-                operators.pop();
+            while (operatorsIndex >= 0 && precedence(operators[operatorsIndex]) >= precedence(c)) {
+                postfix[k++] = operators[operatorsIndex--];
             }
-            operators.push(c);
+            operators[++operatorsIndex] = c;
         }
     }
 
-    while (!operators.empty()) {
-        postfix += operators.top();
-        operators.pop();
+    while (operatorsIndex >= 0) {
+        postfix[k++] = operators[operatorsIndex--];
     }
 
+    postfix[k] = '\0';
     return postfix;
 }
 
-#endif //EXPRESSIONTREE_HPP
+#endif // EXPRESSIONTREE_HPP

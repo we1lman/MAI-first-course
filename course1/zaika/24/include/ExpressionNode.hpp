@@ -1,17 +1,25 @@
 #ifndef EXPRESSIONNODE_HPP
 #define EXPRESSIONNODE_HPP
 
-#include <string>
-
-using namespace std;
+#include <iostream>
+#include <cstring>
 
 class ExpressionNode {
 public:
-    string value;
+    char* value;
     ExpressionNode* left;
     ExpressionNode* right;
 
-    ExpressionNode(const string &val) : value(val), left(nullptr), right(nullptr) {}
+    ExpressionNode(const char* val) : left(nullptr), right(nullptr) {
+        value = new char[strlen(val) + 1];
+        strcpy(value, val);
+    }
+
+    ~ExpressionNode() {
+        delete[] value;
+        delete left;
+        delete right;
+    }
 };
 
-#endif //EXPRESSIONNODE_HPP
+#endif // EXPRESSIONNODE_HPP
