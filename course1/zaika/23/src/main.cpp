@@ -18,5 +18,7 @@ int main() {
     int minLeafValue = tree.getMinLeaf();
     cout << minLeafValue << endl;
 
+    tree.printTree();
+
     return 0;
 }

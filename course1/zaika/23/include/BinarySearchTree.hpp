@@ -54,11 +54,14 @@ public:
         root = insert(root, value);
     }
 
-    void inorderPrint(TreeNode* node) {
+    void inorderPrint(TreeNode* node, int level = 0) const {
         if (node != nullptr) {
-            inorderPrint(node->left);
-            cout << node->value << " ";
-            inorderPrint(node->right);
+            for (int i = 0; i < level; i++) {
+                cout << "  ";
+            }
+            cout << node->value << endl;
+            inorderPrint(node->left, level + 1);
+            inorderPrint(node->right, level + 1);
         }
     }
 
