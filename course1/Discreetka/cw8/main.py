@@ -4,41 +4,75 @@ from tkinter import simpledialog, messagebox
 import matplotlib.pyplot as plt
 import networkx as nx
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from itertools import permutations
 
+def check_latin_property(sequence, graph):
+    # Проверка свойства P: последовательность является путем
+    for i in range(len(sequence) - 1):
+        if sequence[i+1] not in graph[sequence[i]]:
+            return False
+    return True
 
-def build_latin_square(nodes):
-    n = len(nodes)
-    latin_square = [[0] * n for _ in range(n)]
-    perms = list(permutations(nodes))
+def build_initial_matrices(graph, nodes):
+    M1 = {node: [] for node in nodes}
+    M1_prime = {node: [] for node in nodes}
 
-    for i in range(n):
-        for j in range(n):
-            latin_square[i][j] = perms[i][j]
+    for node in nodes:
+        for neighbor in graph.neighbors(node):
+            M1[node].append(neighbor)
+            M1_prime[neighbor].append(node)
 
-    return latin_square
+    return M1, M1_prime
 
+def compose_matrices(M1, M1_prime):
+    M2 = {key: [] for key in M1.keys()}
+    for key in M1:
+        for value in M1[key]:
+            M2[key].extend(M1_prime[value])
+    return M2
+
+def build_latin_compositions(graph, nodes):
+    M1, M1_prime = build_initial_matrices(graph, nodes)
+    compositions = [M1]
+
+    for _ in range(2, len(nodes)):
+        new_matrix = compose_matrices(compositions[-1], M1_prime)
+        compositions.append(new_matrix)
+
+    return compositions
 
 def enumerate_paths_latin(graph, start, end):
     nodes = list(graph.nodes)
-    node_index = {node: i for i, node in enumerate(nodes)}
-    latin_square = build_latin_square(nodes)
-    paths = []
+    compositions = build_latin_compositions(graph, nodes)
+    paths = set()  # Используем множество для хранения путей
 
     def dfs(current_path):
         current_node = current_path[-1]
         if current_node == end:
-            paths.append(current_path)
+            paths.add(tuple(current_path))  # Добавляем путь в виде кортежа, чтобы он был хешируемым
             return
-        current_index = node_index[current_node]
-        for i in range(len(nodes)):
-            next_node = latin_square[current_index][i]
-            if next_node not in current_path and next_node in graph[current_node]:
-                dfs(current_path + [next_node])
+        for length, comp in enumerate(compositions, start=1):
+            for next_node in comp[current_node]:
+                if next_node not in current_path and next_node in graph[current_node]:
+                    new_path = current_path + [next_node]
+                    if check_latin_property(new_path, graph):
+                        dfs(new_path)
 
     dfs([start])
-    return paths
+    return list(paths)  # Возвращаем пути в виде списка кортежей
 
+# Обновление функции enumerate_paths для вывода результатов
+def enumerate_paths(self):
+    start_node = simpledialog.askstring('Начальная вершина', 'Введите номер начальной вершины')
+    end_node = simpledialog.askstring('Конечная вершина', 'Введите номер конечной вершины')
+    if start_node and end_node:
+        try:
+            start_node = int(start_node)
+            end_node = int(end_node)
+            all_paths = enumerate_paths_latin(self.graph.G, start_node, end_node)
+            messagebox.showinfo('Перечисление путей',
+                                f'Все пути из вершины {start_node} в вершину {end_node}: {all_paths}')
+        except ValueError:
+            messagebox.showerror('Ошибка', 'Введите корректные номера вершин')
 
 class Graph:
     def __init__(self, G=None, from_edges=None):
@@ -59,7 +93,7 @@ class Graph:
         self.G.add_edge(node1, node2)
         self.pos = nx.spring_layout(self.G)
 
-    def remove_node(self, node):
+    def remove_node(self):
         self.G.remove_node(node)
         self.pos = nx.spring_layout(self.G)
 
@@ -75,7 +109,6 @@ class Graph:
 
     def planar_layout(self):
         return nx.planar_layout(self.G)
-
 
 class App:
     def __init__(self):
@@ -169,10 +202,9 @@ class App:
                 end_node = int(end_node)
                 all_paths = enumerate_paths_latin(self.graph.G, start_node, end_node)
                 messagebox.showinfo('Перечисление путей',
-                                    f'Все пути из вершины {start_node} в вершину {end_node}: {all_paths}')
+                                    f'Все пути из вершины {start_node} в вершину {end_node} (всего {len(all_paths)}:\n{all_paths}')
             except ValueError:
                 messagebox.showerror('Ошибка', 'Введите корректные номера вершин')
-
 
 if __name__ == "__main__":
     app = App()
