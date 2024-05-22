@@ -4,4 +4,8 @@ project(BinaryTreeSearch LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_executable(main ../src/main.cpp)
+include_directories(include)
+
+set(SOURCES src/main.cpp)
+
+add_executable(main ${SOURCES})

@@ -4,9 +4,6 @@
 #include "TreeNode.hpp"
 #include <iostream>
 
-using std::cout;
-using std::endl;
-
 const int INT_MAX = 2147483647;
 
 class BinarySearchTree {
@@ -57,9 +54,9 @@ public:
     void inorderPrint(TreeNode* node, int level = 0) const {
         if (node != nullptr) {
             for (int i = 0; i < level; i++) {
-                cout << "  ";
+                std::cout << "  ";
             }
-            cout << node->value << endl;
+            std::cout << node->value << std::endl;
             inorderPrint(node->left, level + 1);
             inorderPrint(node->right, level + 1);
         }
@@ -67,7 +64,7 @@ public:
 
     void printTree() {
         inorderPrint(root);
-        cout << endl;
+        std::cout << std::endl;
     }
 
     int getMinLeaf() {

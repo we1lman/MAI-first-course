@@ -16,7 +16,7 @@ int main() {
     tree.insert(75); // leaf
 
     int minLeafValue = tree.getMinLeaf();
-    cout << minLeafValue << endl;
+    std::cout << minLeafValue << std::endl;
 
     tree.printTree();
 
