@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+# Функция для проверки свойства P: последовательность является путем в графе
 def check_latin_property(sequence, graph):
     # Проверка свойства P: последовательность является путем
     for i in range(len(sequence) - 1):
@@ -12,6 +13,7 @@ def check_latin_property(sequence, graph):
             return False
     return True
 
+# Функция для построения начальных матриц M1 и M1_prime
 def build_initial_matrices(graph, nodes):
     M1 = {node: [] for node in nodes}
     M1_prime = {node: [] for node in nodes}
@@ -23,6 +25,7 @@ def build_initial_matrices(graph, nodes):
 
     return M1, M1_prime
 
+# Функция для композиции матриц M1 и M1_prime
 def compose_matrices(M1, M1_prime):
     M2 = {key: [] for key in M1.keys()}
     for key in M1:
@@ -30,6 +33,7 @@ def compose_matrices(M1, M1_prime):
             M2[key].extend(M1_prime[value])
     return M2
 
+# Функция для построения латинских композиций
 def build_latin_compositions(graph, nodes):
     M1, M1_prime = build_initial_matrices(graph, nodes)
     compositions = [M1]
@@ -40,15 +44,16 @@ def build_latin_compositions(graph, nodes):
 
     return compositions
 
+# Функция для перечисления всех путей в графе с использованием латинских композиций
 def enumerate_paths_latin(graph, start, end):
     nodes = list(graph.nodes)
     compositions = build_latin_compositions(graph, nodes)
-    paths = set()  # Используем множество для хранения путей
+    paths = set()
 
-    def dfs(current_path):
+    def dfs(current_path): # Рекурсивная функция для поиска в глубину
         current_node = current_path[-1]
         if current_node == end:
-            paths.add(tuple(current_path))  # Добавляем путь в виде кортежа, чтобы он был хешируемым
+            paths.add(tuple(current_path))
             return
         for length, comp in enumerate(compositions, start=1):
             for next_node in comp[current_node]:
@@ -58,9 +63,9 @@ def enumerate_paths_latin(graph, start, end):
                         dfs(new_path)
 
     dfs([start])
-    return list(paths)  # Возвращаем пути в виде списка кортежей
+    return list(paths)
 
-# Обновление функции enumerate_paths для вывода результатов
+# Функция для отображения всех путей от начального до конечного узла
 def enumerate_paths(self):
     start_node = simpledialog.askstring('Начальная вершина', 'Введите номер начальной вершины')
     end_node = simpledialog.askstring('Конечная вершина', 'Введите номер конечной вершины')
@@ -93,7 +98,7 @@ class Graph:
         self.G.add_edge(node1, node2)
         self.pos = nx.spring_layout(self.G)
 
-    def remove_node(self):
+    def remove_node(self, node):
         self.G.remove_node(node)
         self.pos = nx.spring_layout(self.G)
 
