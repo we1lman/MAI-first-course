@@ -2,7 +2,7 @@
 #include <iostream>
 
 int main() {
-    const char* filename = "computer_inventory.dat";
+    const char* filename = "computer_inventory.bin";
     int p;
     std::cout << "Enter value p: ";
     std::cin >> p;

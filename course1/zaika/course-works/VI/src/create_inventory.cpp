@@ -6,7 +6,7 @@
 void writeComputers(const char* inputFilename, const char* outputFilename) {
     std::ifstream inputFile(inputFilename);
     if (!inputFile) {
-        std::cerr << "The file could not be opened for reading: " << inputFilename << std::endl;
+        std::cerr << "Failed to open file for reading: " << inputFilename << std::endl;
         return;
     }
 
@@ -49,7 +49,7 @@ void writeComputers(const char* inputFilename, const char* outputFilename) {
 
     std::ofstream outputFile(outputFilename, std::ios::binary);
     if (!outputFile) {
-        std::cerr << "The file could not be opened for writing: " << outputFilename << std::endl;
+        std::cerr << "Failed to open file for writing: " << outputFilename << std::endl;
         delete[] computers;
         return;
     }
@@ -60,14 +60,14 @@ void writeComputers(const char* inputFilename, const char* outputFilename) {
     }
 
     outputFile.close();
-    std::cout << "The " << outputFilename << " file has been successfully created." << std::endl;
+    std::cout << "The " << outputFilename << " file created successfully." << std::endl;
 
     delete[] computers;
 }
 
 int main() {
     const char* inputFilename = "../include/data.txt";
-    const char* outputFilename = "computer_inventory.dat";
+    const char* outputFilename = "computer_inventory.bin";
     writeComputers(inputFilename, outputFilename);
     return 0;
 }
