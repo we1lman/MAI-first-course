@@ -1,5 +1,5 @@
-#ifndef BINARYSEARCHTREE_H
-#define BINARYSEARCHTREE_H
+#ifndef BINARYSEARCHTREE_HPP
+#define BINARYSEARCHTREE_HPP
 
 #include "TreeNode.hpp"
 #include <iostream>
@@ -74,4 +74,4 @@ public:
     }
 };
 
-#endif // BINARYSEARCHTREE_H
+#endif // BINARYSEARCHTREE_HPP

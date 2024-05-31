@@ -1,5 +1,5 @@
-#ifndef TREENODE_H
-#define TREENODE_H
+#ifndef TREENODE_HPP
+#define TREENODE_HPP
 
 class TreeNode {
 public:
@@ -10,4 +10,4 @@ public:
     TreeNode(int val) : value(val), left(nullptr), right(nullptr) {}
 };
 
-#endif // TREENODE_H
+#endif // TREENODE_HPP
